@@ -437,7 +437,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
               `}
             >
               {/* Front of Card (Question) */}
-              <div className="absolute w-full h-full backface-hidden bg-white rounded-3xl p-8 md:p-12 flex flex-col items-center justify-center text-center border border-slate-100 overflow-y-auto custom-scrollbar">
+              <div className="absolute w-full h-full backface-hidden bg-white rounded-3xl p-8 md:p-12 flex flex-col text-center border border-slate-100">
                 <span className="absolute top-6 left-6 text-xs font-bold tracking-wider text-indigo-500 uppercase">
                   Question
                 </span>
@@ -446,41 +446,48 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                     {currentCard.category}
                   </span>
                 )}
-                <div className="w-full text-xl md:text-3xl font-bold text-slate-800 leading-relaxed select-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={{
-                      p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />
-                    }}
-                  >
-                    {formatLatexForDisplay(currentCard.question)}
-                  </ReactMarkdown>
+                
+                <div className="flex-1 w-full flex flex-col items-center justify-center overflow-y-auto custom-scrollbar mt-6 mb-4">
+                  <div className="w-full text-xl md:text-3xl font-bold text-slate-800 leading-relaxed select-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />
+                      }}
+                    >
+                      {formatLatexForDisplay(currentCard.question)}
+                    </ReactMarkdown>
+                  </div>
                 </div>
-                <p className="absolute bottom-8 text-sm text-slate-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                
+                <p className="shrink-0 text-sm text-slate-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                   Tap to reveal answer
                 </p>
               </div>
 
               {/* Back of Card (Answer) */}
-              <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-slate-900 rounded-3xl p-8 md:p-12 flex flex-col items-center justify-center text-center text-white overflow-y-auto custom-scrollbar">
+              <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-slate-900 rounded-3xl p-8 md:p-12 flex flex-col text-center text-white">
                 <span className="absolute top-6 left-6 text-xs font-bold tracking-wider text-slate-400 uppercase">
                   Answer
                 </span>
-                <div className="w-full text-lg md:text-2xl font-medium leading-relaxed mb-8 select-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={{
-                      p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />
-                    }}
-                  >
-                    {formatLatexForDisplay(currentCard.answer)}
-                  </ReactMarkdown>
+                
+                <div className="flex-1 w-full flex flex-col items-center justify-center overflow-y-auto custom-scrollbar mt-6 mb-4">
+                  <div className="w-full text-lg md:text-2xl font-medium leading-relaxed select-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />
+                      }}
+                    >
+                      {formatLatexForDisplay(currentCard.answer)}
+                    </ReactMarkdown>
+                  </div>
                 </div>
                 
                 {/* Study Controls - Only visible on back */}
-                <div className="absolute bottom-8 flex gap-4 w-full px-8 justify-center">
+                <div className="shrink-0 flex gap-4 w-full justify-center">
                    <button
                      onClick={markIncorrect}
                      className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all hover:scale-105"

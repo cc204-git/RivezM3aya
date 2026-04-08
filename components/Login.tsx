@@ -168,6 +168,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </form>
         </div>
       </div>
+      
+      <div className="mt-auto pt-8 pb-4 text-center text-sm text-slate-500">
+        <p>© Made by Eng.Youssef Ouled Abdallah 2026</p>
+      </div>
     </div>
   );
 };

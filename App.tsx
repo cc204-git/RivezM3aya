@@ -347,6 +347,38 @@ const App: React.FC = () => {
      }
   };
 
+  const handleCombineDecks = async (deckIds: string[]) => {
+    const decksToMerge = savedDecks.filter(d => deckIds.includes(d.id));
+    if (decksToMerge.length < 2) return;
+
+    const combinedCards = decksToMerge.flatMap(d => d.cards).map((card, index) => ({
+      ...card,
+      id: `card-${Date.now()}-${index}`
+    }));
+
+    const newDeck: Deck = {
+      id: `deck-${Date.now()}`,
+      title: `Combined Deck (${decksToMerge.length} decks)`,
+      createdAt: Date.now(),
+      cards: combinedCards,
+      type: decksToMerge[0]?.type || DeckType.FLASHCARDS
+    };
+
+    try {
+      await saveDeck(newDeck);
+      await refreshData();
+      setToast({ message: 'Decks combined successfully!', type: 'success' });
+      
+      // Open the edit modal so the user can immediately rename it
+      setDeckToEdit(newDeck);
+      setSaveName(newDeck.title);
+      setSaveCategoryId(newDeck.categoryId || '');
+      setShowEditDeckModal(true);
+    } catch (e) {
+      setToast({ message: 'Failed to combine decks.', type: 'error' });
+    }
+  };
+
   const handleGoHome = () => {
     setAppState(AppState.IDLE);
     setCurrentDeck(null);
@@ -371,10 +403,13 @@ const App: React.FC = () => {
 
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center animate-pulse">
           <Brain className="w-12 h-12 text-indigo-600 mb-4" />
           <p className="text-slate-500 font-medium">Loading...</p>
+        </div>
+        <div className="pb-6 text-center text-sm text-slate-500">
+          <p>© Made by Eng.Youssef Ouled Abdallah 2026</p>
         </div>
       </div>
     );
@@ -386,8 +421,8 @@ const App: React.FC = () => {
 
   if (isWelcoming) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-in fade-in zoom-in duration-500 flex flex-col items-center">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
           <div className="bg-indigo-600 p-4 rounded-2xl shadow-lg mb-6 animate-bounce">
             <Brain className="w-12 h-12 text-white" />
           </div>
@@ -395,6 +430,9 @@ const App: React.FC = () => {
             Mar7ba bik, <span className="text-indigo-600">{user.name}</span>!
           </h1>
           <p className="mt-4 text-slate-500 animate-pulse">Getting your flashcards ready...</p>
+        </div>
+        <div className="pb-6 text-center text-sm text-slate-500">
+          <p>© Made by Eng.Youssef Ouled Abdallah 2026</p>
         </div>
       </div>
     );
@@ -453,6 +491,7 @@ const App: React.FC = () => {
                 onCreateNew={handleGoHome}
                 onCreateCategory={() => { setNewCategoryName(''); setShowCategoryModal(true); }}
                 onDeleteCategory={handleDeleteCategory}
+                onCombineDecks={handleCombineDecks}
              />
           )}
 

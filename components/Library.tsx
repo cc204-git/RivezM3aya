@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Calendar, Trash2, Play, Layers, Edit2, FolderPlus, Folder, ChevronDown, SortAsc, SortDesc, Filter, XCircle } from 'lucide-react';
+import { BookOpen, Calendar, Trash2, Play, Layers, Edit2, FolderPlus, Folder, ChevronDown, SortAsc, SortDesc, Filter, XCircle, Combine, CheckSquare, Square } from 'lucide-react';
 import { Deck, Category } from '../types';
 
 interface LibraryProps {
@@ -11,6 +11,7 @@ interface LibraryProps {
   onCreateNew: () => void;
   onCreateCategory: () => void;
   onDeleteCategory: (id: string) => void;
+  onCombineDecks: (deckIds: string[]) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'count-desc';
@@ -23,10 +24,13 @@ const Library: React.FC<LibraryProps> = ({
   onEditDeck,
   onCreateNew,
   onCreateCategory,
-  onDeleteCategory
+  onDeleteCategory,
+  onCombineDecks
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [isCombineMode, setIsCombineMode] = useState(false);
+  const [selectedForCombine, setSelectedForCombine] = useState<string[]>([]);
 
   // Filter and Sort Logic
   const filteredAndSortedDecks = useMemo(() => {
@@ -54,6 +58,28 @@ const Library: React.FC<LibraryProps> = ({
 
     return result;
   }, [decks, selectedCategory, sortBy]);
+
+  const toggleCombineSelection = (deckId: string) => {
+    setSelectedForCombine(prev => 
+      prev.includes(deckId) ? prev.filter(id => id !== deckId) : [...prev, deckId]
+    );
+  };
+
+  const handleCombineClick = () => {
+    if (isCombineMode) {
+      if (selectedForCombine.length >= 2) {
+        onCombineDecks(selectedForCombine);
+        setIsCombineMode(false);
+        setSelectedForCombine([]);
+      } else {
+        setIsCombineMode(false);
+        setSelectedForCombine([]);
+      }
+    } else {
+      setIsCombineMode(true);
+      setSelectedForCombine([]);
+    }
+  };
 
   if (decks.length === 0) {
     return (
@@ -111,6 +137,22 @@ const Library: React.FC<LibraryProps> = ({
                 <ChevronDown className="w-3 h-3 text-slate-400 absolute right-3 pointer-events-none" />
              </div>
           </div>
+
+          <button
+            onClick={handleCombineClick}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              isCombineMode && selectedForCombine.length >= 2
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : isCombineMode
+                ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <Combine className="w-4 h-4" />
+            {isCombineMode 
+              ? (selectedForCombine.length >= 2 ? `Merge ${selectedForCombine.length} Decks` : 'Cancel Combine') 
+              : 'Combine'}
+          </button>
 
           <button
             onClick={onCreateNew}
@@ -184,41 +226,60 @@ const Library: React.FC<LibraryProps> = ({
         {filteredAndSortedDecks.length > 0 ? (
           filteredAndSortedDecks.map((deck) => {
             const categoryName = categories.find(c => c.id === deck.categoryId)?.name;
+            const isSelected = selectedForCombine.includes(deck.id);
+
             return (
               <div 
                 key={deck.id}
-                className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-md transition-all duration-200 flex flex-col h-full"
+                onClick={() => isCombineMode ? toggleCombineSelection(deck.id) : null}
+                className={`group bg-white border rounded-xl p-5 transition-all duration-200 flex flex-col h-full ${
+                  isCombineMode 
+                    ? 'cursor-pointer hover:border-indigo-400' 
+                    : 'hover:border-indigo-300 hover:shadow-md'
+                } ${
+                  isSelected ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/30' : 'border-slate-200'
+                }`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex flex-col gap-1">
                      <div className="flex gap-2">
-                       <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 group-hover:bg-indigo-100 transition-colors self-start">
+                       <div className={`p-2 rounded-lg transition-colors self-start ${
+                         isSelected ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100'
+                       }`}>
                          <BookOpen className="w-5 h-5" />
                        </div>
                      </div>
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditDeck(deck);
-                      }}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="Edit Deck"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteDeck(deck.id);
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete Deck"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isCombineMode ? (
+                      <div className={`p-1 rounded-md ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>
+                        {isSelected ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditDeck(deck);
+                          }}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit Deck"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteDeck(deck.id);
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Deck"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -245,13 +306,18 @@ const Library: React.FC<LibraryProps> = ({
                     </span>
                   </div>
                   
-                  <button
-                    onClick={() => onSelectDeck(deck)}
-                    className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold hover:bg-indigo-600 hover:text-white transition-colors flex items-center gap-2"
-                  >
-                    Study
-                    <Play className="w-3 h-3 fill-current" />
-                  </button>
+                  {!isCombineMode && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectDeck(deck);
+                      }}
+                      className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold hover:bg-indigo-600 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      Study
+                      <Play className="w-3 h-3 fill-current" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

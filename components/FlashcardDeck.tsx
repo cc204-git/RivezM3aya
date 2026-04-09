@@ -164,12 +164,13 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
   // This allows the app to render the math while keeping the original format for CSV export
   const formatLatexForDisplay = (text: string) => {
     if (!text) return '';
-    // Replace \[ ... \] with $$ ... $$ for block math
-    // We use a function replacement to avoid issues with nested groups if any (though regex is simple here)
-    let formatted = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, content) => `$$${content}$$`);
+    let formatted = text;
     
-    // Replace \( ... \) with $ ... $ for inline math
-    formatted = formatted.replace(/\\\(([\s\S]*?)\\\)/g, (_, content) => `$${content}$`);
+    // Replace \\[ ... \\] or \[ ... \] with $$ ... $$ for block math
+    formatted = formatted.replace(/(?:\\\\|\\)\[([\s\S]*?)(?:\\\\|\\)\]/g, (_, content) => `$$${content}$$`);
+    
+    // Replace \\( ... \\) or \( ... \) with $ ... $ for inline math
+    formatted = formatted.replace(/(?:\\\\|\\)\(([\s\S]*?)(?:\\\\|\\)\)/g, (_, content) => `$${content}$`);
     
     return formatted;
   };

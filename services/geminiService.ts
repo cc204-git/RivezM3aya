@@ -105,11 +105,10 @@ export const generateFlashcardsFromContent = async (
          ${deckType === DeckType.QCM ? '- For each question, provide EXACTLY 4 options.\n         - Provide an array of correct option indices (0-3). There can be 1 or multiple correct options.\n         - The "answer" field should contain an explanation of why the correct options are right.' : ''}
       4. FORMATTING (CRITICAL):
          - You are outputting a raw JSON string. 
-         - **DOUBLE ESCAPE ALL BACKSLASHES** used in LaTeX. 
-         - To write a LaTeX start tag like \\( , you MUST write "\\\\(" in the JSON string.
-         - To write a LaTeX end tag like \\) , you MUST write "\\\\)" in the JSON string.
-         - Example: "question": "Solve for \\\\( x \\\\) in \\\\( x^2 = 4 \\\\)"
-         - For Chemistry \\ce{}, write "\\\\ce{...}".
+         - Use $ ... $ for inline math and $$ ... $$ for block math.
+         - DO NOT use \\( ... \\) or \\[ ... \\].
+         - You MUST escape backslashes in LaTeX commands so they are valid in JSON. For example, write "\\\\frac" instead of "\\frac", and "\\\\int" instead of "\\int".
+         - For Chemistry, use $ \\\\ce{...} $.
          - Escape all double quotes inside strings (e.g. \\").
          - DO NOT use real line breaks inside strings. Use \\n for line breaks.
       5. STRICTLY GENERATE THE CONTENT IN THE SAME LANGUAGE AS THE SOURCE TEXT.

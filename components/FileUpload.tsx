@@ -134,7 +134,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelect, isLoading, error
             </h3>
             <p className="text-sm text-slate-500 max-w-xs mx-auto">
               {isLoading 
-                ? 'Gemini is analyzing your files and creating flashcards.' 
+                ? 'El mli7 yabta' 
                 : 'Drag and drop PDF files, Images, or a saved JSON deck here.'}
             </p>
           </div>

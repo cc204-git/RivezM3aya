@@ -18,11 +18,16 @@ export interface Deck {
   cards: FlashcardData[];
   categoryId?: string;
   type?: DeckType;
+  hasSourceFiles?: boolean;
+  userId?: string;
+  collaborators?: string[];
 }
 
 export interface Category {
   id: string;
   name: string;
+  userId?: string;
+  collaborators?: string[];
 }
 
 export enum AppState {

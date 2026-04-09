@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Deck, Category } from "../types";
 
@@ -62,14 +62,28 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 export const getDecks = async (): Promise<Deck[]> => {
   try {
     const userId = auth.currentUser?.uid;
+    const email = auth.currentUser?.email;
     if (!userId) return [];
 
-    const q = query(collection(db, 'decks'), where('userId', '==', userId));
-    const querySnapshot = await getDocs(q);
-    const decks: Deck[] = [];
-    querySnapshot.forEach((doc) => {
-      decks.push(doc.data() as Deck);
+    const decksMap = new Map<string, Deck>();
+
+    // Fetch owned decks
+    const q1 = query(collection(db, 'decks'), where('userId', '==', userId));
+    const querySnapshot1 = await getDocs(q1);
+    querySnapshot1.forEach((doc) => {
+      decksMap.set(doc.id, doc.data() as Deck);
     });
+
+    // Fetch shared decks
+    if (email) {
+      const q2 = query(collection(db, 'decks'), where('collaborators', 'array-contains', email));
+      const querySnapshot2 = await getDocs(q2);
+      querySnapshot2.forEach((doc) => {
+        decksMap.set(doc.id, doc.data() as Deck);
+      });
+    }
+
+    const decks = Array.from(decksMap.values());
     // Sort by createdAt descending
     return decks.sort((a, b) => b.createdAt - a.createdAt);
   } catch (e) {
@@ -106,15 +120,28 @@ export const deleteDeck = async (id: string): Promise<void> => {
 export const getCategories = async (): Promise<Category[]> => {
   try {
     const userId = auth.currentUser?.uid;
+    const email = auth.currentUser?.email;
     if (!userId) return [];
 
-    const q = query(collection(db, 'categories'), where('userId', '==', userId));
-    const querySnapshot = await getDocs(q);
-    const categories: Category[] = [];
-    querySnapshot.forEach((doc) => {
-      categories.push(doc.data() as Category);
+    const categoriesMap = new Map<string, Category>();
+
+    // Fetch owned categories
+    const q1 = query(collection(db, 'categories'), where('userId', '==', userId));
+    const querySnapshot1 = await getDocs(q1);
+    querySnapshot1.forEach((doc) => {
+      categoriesMap.set(doc.id, doc.data() as Category);
     });
-    return categories;
+
+    // Fetch shared categories
+    if (email) {
+      const q2 = query(collection(db, 'categories'), where('collaborators', 'array-contains', email));
+      const querySnapshot2 = await getDocs(q2);
+      querySnapshot2.forEach((doc) => {
+        categoriesMap.set(doc.id, doc.data() as Category);
+      });
+    }
+
+    return Array.from(categoriesMap.values());
   } catch (e) {
     handleFirestoreError(e, OperationType.LIST, 'categories');
     return [];
@@ -133,6 +160,51 @@ export const saveCategory = async (category: Category): Promise<void> => {
   }
 };
 
+export const shareCategory = async (categoryId: string, emailToInvite: string): Promise<void> => {
+  try {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    // 1. Update the category
+    const catRef = doc(db, 'categories', categoryId);
+    
+    // We need to fetch the current category to append to collaborators
+    const qCat = query(collection(db, 'categories'), where('id', '==', categoryId));
+    const catSnap = await getDocs(qCat);
+    let currentCollaborators: string[] = [];
+    catSnap.forEach(d => {
+      const data = d.data() as Category;
+      if (data.collaborators) {
+        currentCollaborators = data.collaborators;
+      }
+    });
+
+    if (!currentCollaborators.includes(emailToInvite)) {
+      currentCollaborators.push(emailToInvite);
+      await updateDoc(catRef, { collaborators: currentCollaborators });
+    }
+
+    // 2. Update all decks in this category
+    const qDecks = query(collection(db, 'decks'), where('categoryId', '==', categoryId));
+    const decksSnap = await getDocs(qDecks);
+    
+    if (!decksSnap.empty) {
+      const batch = writeBatch(db);
+      decksSnap.forEach((deckDoc) => {
+        const deckData = deckDoc.data() as Deck;
+        const deckCollabs = deckData.collaborators || [];
+        if (!deckCollabs.includes(emailToInvite)) {
+          batch.update(doc(db, 'decks', deckDoc.id), { 
+            collaborators: [...deckCollabs, emailToInvite] 
+          });
+        }
+      });
+      await batch.commit();
+    }
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, `categories/${categoryId}/share`);
+  }
+};
 export const deleteCategory = async (id: string): Promise<void> => {
   try {
     const userId = auth.currentUser?.uid;

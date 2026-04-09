@@ -8,7 +8,8 @@ import Library from './components/Library';
 import Login from './components/Login';
 import { AppState, Deck, FlashcardData, Category, DeckType } from './types';
 import { generateFlashcardsFromContent } from './services/geminiService';
-import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory } from './services/storageService';
+import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory, shareCategory } from './services/storageService';
+import { saveFilesLocally, deleteFilesLocally } from './services/localFileStorage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
@@ -21,7 +22,7 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   
   // Store the raw file data and instructions to allow regeneration
-  const [lastUploadedAssets, setLastUploadedAssets] = useState<{ mimeType: string; data: string }[] | null>(null);
+  const [lastUploadedAssets, setLastUploadedAssets] = useState<{ name: string; mimeType: string; data: string }[] | null>(null);
   const [lastInstructions, setLastInstructions] = useState<string>('');
   
   // UI State for Modals and Toasts
@@ -135,7 +136,7 @@ const App: React.FC = () => {
 
       if (contentFiles.length === 0) throw new Error("No supported files (PDF or Images) selected.");
 
-      const fileReadPromises = contentFiles.map(file => new Promise<{ mimeType: string; data: string }>((resolve, reject) => {
+      const fileReadPromises = contentFiles.map(file => new Promise<{ name: string; mimeType: string; data: string }>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
            const base64String = reader.result as string;
@@ -149,7 +150,7 @@ const App: React.FC = () => {
              else if (file.name.match(/\.heic$/i)) mimeType = 'image/heic';
              else mimeType = 'application/octet-stream';
            }
-           resolve({ mimeType, data: base64Data });
+           resolve({ name: file.name, mimeType, data: base64Data });
         };
         reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
         reader.readAsDataURL(file);
@@ -186,11 +187,13 @@ const App: React.FC = () => {
           createdAt: Date.now(),
           cards: result.cards,
           categoryId,
-          type: deckType
+          type: deckType,
+          hasSourceFiles: true
       };
 
       // Auto-save the deck
       await saveDeck(newDeck);
+      await saveFilesLocally(newDeck.id, fileData);
       setSavedDecks(prev => [newDeck, ...prev]);
 
       setCurrentDeck(newDeck);
@@ -222,8 +225,13 @@ const App: React.FC = () => {
         id: `deck-${Date.now()}`,
         title: currentTitle,
         createdAt: Date.now(),
-        cards: generatedCards
+        cards: generatedCards,
+        hasSourceFiles: true
       };
+
+      await saveDeck(newDeck);
+      await saveFilesLocally(newDeck.id, lastUploadedAssets);
+      setSavedDecks(prev => [newDeck, ...prev]);
 
       setCurrentDeck(newDeck);
       setAppState(AppState.STUDYING);
@@ -326,6 +334,7 @@ const App: React.FC = () => {
   const confirmDeleteDeck = async () => {
     if (deckToDelete) {
       await deleteDeck(deckToDelete);
+      await deleteFilesLocally(deckToDelete);
       await refreshData();
       setDeckToDelete(null);
       setToast({ message: 'Deck deleted.', type: 'success' });
@@ -376,6 +385,16 @@ const App: React.FC = () => {
       setShowEditDeckModal(true);
     } catch (e) {
       setToast({ message: 'Failed to combine decks.', type: 'error' });
+    }
+  };
+
+  const handleShareCategory = async (categoryId: string, email: string) => {
+    try {
+      await shareCategory(categoryId, email);
+      await refreshData();
+      setToast({ message: `Invitation sent to ${email}`, type: 'success' });
+    } catch (e) {
+      setToast({ message: 'Failed to share category.', type: 'error' });
     }
   };
 
@@ -492,6 +511,7 @@ const App: React.FC = () => {
                 onCreateCategory={() => { setNewCategoryName(''); setShowCategoryModal(true); }}
                 onDeleteCategory={handleDeleteCategory}
                 onCombineDecks={handleCombineDecks}
+                onShareCategory={handleShareCategory}
              />
           )}
 
@@ -522,6 +542,7 @@ const App: React.FC = () => {
             <div className="flex-1 animate-in slide-in-from-bottom-8 duration-700 fade-in">
               <FlashcardDeck 
                 cards={currentDeck.cards} 
+                deckId={currentDeck.id}
                 deckTitle={currentDeck.title}
                 isSaved={isCurrentDeckSaved}
                 canRegenerate={canRegenerate}

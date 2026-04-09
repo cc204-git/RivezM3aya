@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Shuffle, Layers, Check, X, Repeat, Trophy, Download, Bookmark, BookmarkCheck, FileSpreadsheet, FileJson, RefreshCw } from 'lucide-react';
+import { RotateCcw, Shuffle, Layers, Check, X, Repeat, Trophy, Download, Bookmark, BookmarkCheck, FileSpreadsheet, FileJson, RefreshCw, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { FlashcardData } from '../types';
+import { getFilesLocally } from '../services/localFileStorage';
 
 interface FlashcardDeckProps {
   cards: FlashcardData[];
+  deckId?: string;
   deckTitle?: string;
   isSaved?: boolean;
   canRegenerate?: boolean;
@@ -17,6 +19,7 @@ interface FlashcardDeckProps {
 
 const FlashcardDeck: React.FC<FlashcardDeckProps> = ({ 
   cards: initialCards, 
+  deckId,
   deckTitle, 
   isSaved = false, 
   canRegenerate = false,
@@ -35,6 +38,10 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
   // QCM State
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
   const [qcmChecked, setQcmChecked] = useState(false);
+
+  // Source Files State
+  const [sourceFiles, setSourceFiles] = useState<{name: string, mimeType: string, data: string}[] | null>(null);
+  const [showSourceModal, setShowSourceModal] = useState(false);
 
   // When the queue changes (new card), ensure it starts face up (question side)
   useEffect(() => {
@@ -105,6 +112,39 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
     document.body.removeChild(link);
   };
 
+  const loadSourceFiles = async () => {
+    if (!deckId) return;
+    try {
+      const files = await getFilesLocally(deckId);
+      if (files && files.length > 0) {
+        setSourceFiles(files);
+        setShowSourceModal(true);
+      } else {
+        alert("Source files not found on this device.");
+      }
+    } catch (e) {
+      console.error("Error loading source files", e);
+      alert("Failed to load source files.");
+    }
+  };
+
+  const openFile = (file: {name: string, mimeType: string, data: string}) => {
+    try {
+      const byteCharacters = atob(file.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: file.mimeType });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (e) {
+      console.error("Error opening file", e);
+      alert("Failed to open file.");
+    }
+  };
+
   const markCorrect = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
@@ -118,13 +158,37 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
     setIsFlipped(false);
   };
 
+  const shuffleQcmOptions = (card: FlashcardData): FlashcardData => {
+    if (!card.options || !card.correctOptions) return card;
+
+    const mappedOptions = card.options.map((opt, idx) => ({
+      text: opt,
+      isCorrect: card.correctOptions!.includes(idx)
+    }));
+
+    // Fisher-Yates shuffle
+    for (let i = mappedOptions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [mappedOptions[i], mappedOptions[j]] = [mappedOptions[j], mappedOptions[i]];
+    }
+
+    return {
+      ...card,
+      options: mappedOptions.map(o => o.text),
+      correctOptions: mappedOptions.map((o, idx) => o.isCorrect ? idx : -1).filter(idx => idx !== -1)
+    };
+  };
+
   const markIncorrect = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
     setSeenCards(prev => new Set(prev).add(queue[0].id));
 
     setQueue(prev => {
-      const current = prev[0];
+      let current = prev[0];
+      if (current.options && current.correctOptions) {
+        current = shuffleQcmOptions(current);
+      }
       const rest = prev.slice(1);
       return [...rest, current];
     });
@@ -277,6 +341,17 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+           {deckId && (
+             <button 
+              onClick={loadSourceFiles}
+              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all flex items-center gap-2"
+              title="View Source Files"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs font-bold">Source Files</span>
+            </button>
+           )}
+           
            <button 
             onClick={onSaveToLibrary}
             className={`p-2 rounded-full transition-all flex items-center gap-2 px-3
@@ -520,6 +595,57 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
            <p>Rate your knowledge to continue</p>
         )}
       </div>
+
+      {/* Source Files Modal */}
+      {showSourceModal && sourceFiles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-600" />
+                Source Files
+              </h3>
+              <button onClick={() => setShowSourceModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              <p className="text-sm text-slate-500 mb-4">
+                These are the files that were used to generate this deck.
+              </p>
+              <div className="space-y-3">
+                {sourceFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="truncate">
+                        <p className="font-medium text-slate-700 truncate">{file.name || `File ${idx + 1}`}</p>
+                        <p className="text-xs text-slate-400">{file.mimeType}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openFile(file)}
+                      className="px-3 py-1.5 bg-white border border-slate-200 text-indigo-600 text-sm font-medium rounded-lg hover:bg-indigo-50 transition-colors shrink-0"
+                    >
+                      Open
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 shrink-0 text-right">
+              <button
+                onClick={() => setShowSourceModal(false)}
+                className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

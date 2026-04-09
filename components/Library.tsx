@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Calendar, Trash2, Play, Layers, Edit2, FolderPlus, Folder, ChevronDown, SortAsc, SortDesc, Filter, XCircle, Combine, CheckSquare, Square } from 'lucide-react';
+import { BookOpen, Calendar, Trash2, Play, Layers, Edit2, FolderPlus, Folder, ChevronDown, SortAsc, SortDesc, Filter, XCircle, Combine, CheckSquare, Square, Share2, X, Users } from 'lucide-react';
 import { Deck, Category } from '../types';
 
 interface LibraryProps {
@@ -12,6 +12,7 @@ interface LibraryProps {
   onCreateCategory: () => void;
   onDeleteCategory: (id: string) => void;
   onCombineDecks: (deckIds: string[]) => void;
+  onShareCategory: (categoryId: string, email: string) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'count-desc';
@@ -31,6 +32,8 @@ const Library: React.FC<LibraryProps> = ({
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [isCombineMode, setIsCombineMode] = useState(false);
   const [selectedForCombine, setSelectedForCombine] = useState<string[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
 
   // Filter and Sort Logic
   const filteredAndSortedDecks = useMemo(() => {
@@ -78,6 +81,15 @@ const Library: React.FC<LibraryProps> = ({
     } else {
       setIsCombineMode(true);
       setSelectedForCombine([]);
+    }
+  };
+
+  const handleShareSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (shareEmail.trim() && selectedCategory !== 'all' && selectedCategory !== 'uncategorized') {
+      onShareCategory(selectedCategory, shareEmail.trim());
+      setShareEmail('');
+      setShowShareModal(false);
     }
   };
 
@@ -189,6 +201,9 @@ const Library: React.FC<LibraryProps> = ({
              >
                 <Folder className="w-3.5 h-3.5" />
                 {cat.name}
+                {cat.collaborators && cat.collaborators.length > 0 && (
+                  <Users className="w-3 h-3 ml-1 opacity-70" />
+                )}
              </button>
              {/* Tiny delete category button that appears on hover */}
              <button 
@@ -219,6 +234,16 @@ const Library: React.FC<LibraryProps> = ({
            <FolderPlus className="w-3.5 h-3.5" />
            New Category
         </button>
+
+        {selectedCategory !== 'all' && selectedCategory !== 'uncategorized' && (
+          <button
+             onClick={() => setShowShareModal(true)}
+             className="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-green-50 text-green-600 border border-green-100 hover:bg-green-100 transition-colors flex items-center gap-1"
+          >
+             <Share2 className="w-3.5 h-3.5" />
+             Share Category
+          </button>
+        )}
       </div>
 
       {/* Decks Grid */}
@@ -329,6 +354,46 @@ const Library: React.FC<LibraryProps> = ({
           </div>
         )}
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-indigo-600" />
+                  Invite Collaborator
+                </h3>
+                <button onClick={() => setShowShareModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 mb-6">
+                Invite someone to view and edit all decks in this category.
+              </p>
+              <form onSubmit={handleShareSubmit}>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={shareEmail}
+                    onChange={(e) => setShareEmail(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="colleague@example.com"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setShowShareModal(false)} className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">Cancel</button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Send Invite</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

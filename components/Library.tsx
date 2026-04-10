@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Calendar, Trash2, Play, Layers, Edit2, FolderPlus, Folder, ChevronDown, SortAsc, SortDesc, Filter, XCircle, Combine, CheckSquare, Square, Share2, X, Users } from 'lucide-react';
-import { Deck, Category } from '../types';
+import { BookOpen, Calendar, Trash2, Play, Layers, Edit2, FolderPlus, Folder, ChevronDown, SortAsc, SortDesc, Filter, XCircle, Combine, CheckSquare, Square, Share2, X, Users, Inbox, Check } from 'lucide-react';
+import { Deck, Category, UserProfile } from '../types';
 
 interface LibraryProps {
   decks: Deck[];
   categories: Category[];
+  userProfile: UserProfile | null;
   onSelectDeck: (deck: Deck) => void;
   onDeleteDeck: (id: string) => void;
   onEditDeck: (deck: Deck) => void;
@@ -13,6 +14,8 @@ interface LibraryProps {
   onDeleteCategory: (id: string) => void;
   onCombineDecks: (deckIds: string[]) => void;
   onShareCategory: (categoryId: string, email: string) => void;
+  onAcceptShare: (categoryId: string) => void;
+  onRejectShare: (categoryId: string) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'count-desc';
@@ -20,13 +23,17 @@ type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'count-desc';
 const Library: React.FC<LibraryProps> = ({ 
   decks, 
   categories,
+  userProfile,
   onSelectDeck, 
   onDeleteDeck, 
   onEditDeck,
   onCreateNew,
   onCreateCategory,
   onDeleteCategory,
-  onCombineDecks
+  onCombineDecks,
+  onShareCategory,
+  onAcceptShare,
+  onRejectShare
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
@@ -36,6 +43,18 @@ const Library: React.FC<LibraryProps> = ({
   const [shareEmail, setShareEmail] = useState('');
 
   // Filter and Sort Logic
+  const pendingCategories = useMemo(() => 
+    categories.filter(c => c.userId !== userProfile?.uid && !userProfile?.acceptedCategories.includes(c.id)),
+  [categories, userProfile]);
+
+  const activeCategories = useMemo(() => 
+    categories.filter(c => c.userId === userProfile?.uid || userProfile?.acceptedCategories.includes(c.id)),
+  [categories, userProfile]);
+
+  const isPendingSelected = useMemo(() => 
+    pendingCategories.some(c => c.id === selectedCategory),
+  [pendingCategories, selectedCategory]);
+
   const filteredAndSortedDecks = useMemo(() => {
     let result = [...decks];
 
@@ -46,6 +65,10 @@ const Library: React.FC<LibraryProps> = ({
       } else {
         result = result.filter(d => d.categoryId === selectedCategory);
       }
+    } else {
+      // If 'all' is selected, hide decks from pending categories
+      const pendingCatIds = pendingCategories.map(c => c.id);
+      result = result.filter(d => !d.categoryId || !pendingCatIds.includes(d.categoryId));
     }
 
     // Sort
@@ -60,7 +83,7 @@ const Library: React.FC<LibraryProps> = ({
     });
 
     return result;
-  }, [decks, selectedCategory, sortBy]);
+  }, [decks, selectedCategory, sortBy, pendingCategories]);
 
   const toggleCombineSelection = (deckId: string) => {
     setSelectedForCombine(prev => 
@@ -189,10 +212,11 @@ const Library: React.FC<LibraryProps> = ({
            All Decks
         </button>
         
-        {categories.map(cat => (
+        {activeCategories.map(cat => (
            <div key={cat.id} className="relative group/cat">
              <button
                 onClick={() => setSelectedCategory(cat.id)}
+                title={cat.collaborators && cat.collaborators.length > 0 ? `Shared with:\n${cat.collaborators.join('\n')}` : undefined}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5
                   ${selectedCategory === cat.id 
                     ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
@@ -229,22 +253,91 @@ const Library: React.FC<LibraryProps> = ({
 
         <button
            onClick={onCreateCategory}
-           className="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors flex items-center gap-1"
+           className="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 bg-white border border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50"
         >
            <FolderPlus className="w-3.5 h-3.5" />
            New Category
         </button>
 
-        {selectedCategory !== 'all' && selectedCategory !== 'uncategorized' && (
-          <button
-             onClick={() => setShowShareModal(true)}
-             className="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-green-50 text-green-600 border border-green-100 hover:bg-green-100 transition-colors flex items-center gap-1"
-          >
-             <Share2 className="w-3.5 h-3.5" />
-             Share Category
-          </button>
+        {pendingCategories.length > 0 && (
+          <>
+            <div className="h-6 w-px bg-slate-300 mx-1 self-center"></div>
+            {pendingCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                title={cat.collaborators && cat.collaborators.length > 0 ? `Shared with:\n${cat.collaborators.join('\n')}` : undefined}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5
+                  ${selectedCategory === cat.id 
+                    ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                    : 'bg-white border border-amber-200 text-amber-700 hover:bg-amber-50'
+                  }`}
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                {cat.name}
+                <span className="bg-amber-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full ml-1">New</span>
+              </button>
+            ))}
+          </>
         )}
       </div>
+
+      {/* Category Action Bar (Share & Collaborators) */}
+      {selectedCategory !== 'all' && selectedCategory !== 'uncategorized' && !isPendingSelected && (
+        <div className="flex items-center justify-end gap-3 py-1 animate-in fade-in">
+          {(() => {
+            const currentCat = categories.find(c => c.id === selectedCategory);
+            if (currentCat && currentCat.collaborators && currentCat.collaborators.length > 0) {
+              return (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-600">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <span className="font-medium">Shared with:</span>
+                  <span className="truncate max-w-[200px] sm:max-w-md">{currentCat.collaborators.join(', ')}</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+          <button
+             onClick={() => setShowShareModal(true)}
+             className="px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors flex items-center gap-2"
+          >
+             <Share2 className="w-4 h-4" />
+             Share Category
+          </button>
+        </div>
+      )}
+
+      {isPendingSelected && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-amber-800 font-medium flex items-center gap-2">
+              <Inbox className="w-5 h-5" />
+              Category Invitation
+            </h3>
+            <p className="text-amber-700 text-sm mt-1">
+              You've been invited to collaborate on this category. You can preview the decks below before accepting.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+            <button
+              onClick={() => {
+                onRejectShare(selectedCategory);
+                setSelectedCategory('all');
+              }}
+              className="flex-1 sm:flex-none px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <X className="w-4 h-4" /> Decline
+            </button>
+            <button
+              onClick={() => onAcceptShare(selectedCategory)}
+              className="flex-1 sm:flex-none px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Check className="w-4 h-4" /> Accept
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Decks Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

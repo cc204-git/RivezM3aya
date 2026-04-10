@@ -43,7 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (err.code === 'auth/email-already-in-use') {
         setError('An account with this email already exists.');
       } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError('Invalid email or password.');
+        setError('Invalid email or password. If you don\'t have an account yet, please click "Sign up" below.');
       } else if (err.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters.');
       } else {

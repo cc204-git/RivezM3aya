@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, getDoc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Deck, Category } from "../types";
 
@@ -76,11 +76,15 @@ export const getDecks = async (): Promise<Deck[]> => {
 
     // Fetch shared decks
     if (email) {
-      const q2 = query(collection(db, 'decks'), where('collaborators', 'array-contains', email));
-      const querySnapshot2 = await getDocs(q2);
-      querySnapshot2.forEach((doc) => {
-        decksMap.set(doc.id, doc.data() as Deck);
-      });
+      try {
+        const q2 = query(collection(db, 'decks'), where('collaborators', 'array-contains', email));
+        const querySnapshot2 = await getDocs(q2);
+        querySnapshot2.forEach((doc) => {
+          decksMap.set(doc.id, doc.data() as Deck);
+        });
+      } catch (sharedError) {
+        console.warn("Could not fetch shared decks. You may need to update your Firestore Security Rules to allow reading where 'collaborators' array-contains your email.", sharedError);
+      }
     }
 
     const decks = Array.from(decksMap.values());
@@ -134,11 +138,15 @@ export const getCategories = async (): Promise<Category[]> => {
 
     // Fetch shared categories
     if (email) {
-      const q2 = query(collection(db, 'categories'), where('collaborators', 'array-contains', email));
-      const querySnapshot2 = await getDocs(q2);
-      querySnapshot2.forEach((doc) => {
-        categoriesMap.set(doc.id, doc.data() as Category);
-      });
+      try {
+        const q2 = query(collection(db, 'categories'), where('collaborators', 'array-contains', email));
+        const querySnapshot2 = await getDocs(q2);
+        querySnapshot2.forEach((doc) => {
+          categoriesMap.set(doc.id, doc.data() as Category);
+        });
+      } catch (sharedError) {
+        console.warn("Could not fetch shared categories. You may need to update your Firestore Security Rules.", sharedError);
+      }
     }
 
     return Array.from(categoriesMap.values());
@@ -165,27 +173,25 @@ export const shareCategory = async (categoryId: string, emailToInvite: string): 
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
-    // 1. Update the category
-    const catRef = doc(db, 'categories', categoryId);
-    
     // We need to fetch the current category to append to collaborators
-    const qCat = query(collection(db, 'categories'), where('id', '==', categoryId));
-    const catSnap = await getDocs(qCat);
+    const catRef = doc(db, 'categories', categoryId);
+    const catSnap = await getDoc(catRef);
+    
     let currentCollaborators: string[] = [];
-    catSnap.forEach(d => {
-      const data = d.data() as Category;
+    if (catSnap.exists()) {
+      const data = catSnap.data() as Category;
       if (data.collaborators) {
         currentCollaborators = data.collaborators;
       }
-    });
+    }
 
     if (!currentCollaborators.includes(emailToInvite)) {
       currentCollaborators.push(emailToInvite);
       await updateDoc(catRef, { collaborators: currentCollaborators });
     }
 
-    // 2. Update all decks in this category
-    const qDecks = query(collection(db, 'decks'), where('categoryId', '==', categoryId));
+    // 2. Update all decks in this category that the user owns
+    const qDecks = query(collection(db, 'decks'), where('categoryId', '==', categoryId), where('userId', '==', userId));
     const decksSnap = await getDocs(qDecks);
     
     if (!decksSnap.empty) {
@@ -227,5 +233,76 @@ export const deleteCategory = async (id: string): Promise<void> => {
     }
   } catch (e) {
     handleFirestoreError(e, OperationType.DELETE, `categories/${id}`);
+  }
+};
+
+import { UserProfile } from '../types';
+
+export const getUserProfile = async (): Promise<UserProfile | null> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return null;
+    const ref = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data() as UserProfile;
+    } else {
+      const newProfile: UserProfile = { uid: user.uid, email: user.email || '', acceptedCategories: [] };
+      await setDoc(ref, newProfile);
+      return newProfile;
+    }
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, `users/${auth.currentUser?.uid}`);
+    return null;
+  }
+};
+
+export const acceptCategoryShare = async (categoryId: string): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const ref = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() as UserProfile;
+      if (!data.acceptedCategories.includes(categoryId)) {
+        await updateDoc(ref, { acceptedCategories: [...data.acceptedCategories, categoryId] });
+      }
+    }
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, `users/${auth.currentUser?.uid}`);
+  }
+};
+
+export const rejectCategoryShare = async (categoryId: string): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) return;
+    
+    const catRef = doc(db, 'categories', categoryId);
+    const catSnap = await getDoc(catRef);
+    if (catSnap.exists()) {
+      const data = catSnap.data() as Category;
+      if (data.collaborators) {
+        const newCollabs = data.collaborators.filter(e => e !== user.email);
+        await updateDoc(catRef, { collaborators: newCollabs });
+      }
+    }
+
+    const qDecks = query(collection(db, 'decks'), where('categoryId', '==', categoryId), where('collaborators', 'array-contains', user.email));
+    const decksSnap = await getDocs(qDecks);
+    if (!decksSnap.empty) {
+      const batch = writeBatch(db);
+      decksSnap.forEach(deckDoc => {
+        const deckData = deckDoc.data() as Deck;
+        if (deckData.collaborators) {
+          const newCollabs = deckData.collaborators.filter(e => e !== user.email);
+          batch.update(doc(db, 'decks', deckDoc.id), { collaborators: newCollabs });
+        }
+      });
+      await batch.commit();
+    }
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, `categories/${categoryId}/reject`);
   }
 };

@@ -8,11 +8,12 @@ import Library from './components/Library';
 import Login from './components/Login';
 import { AppState, Deck, FlashcardData, Category, DeckType } from './types';
 import { generateFlashcardsFromContent } from './services/geminiService';
-import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory, shareCategory } from './services/storageService';
+import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory, shareCategory, getUserProfile, acceptCategoryShare, rejectCategoryShare } from './services/storageService';
 import { saveFilesLocally, deleteFilesLocally } from './services/localFileStorage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isWelcoming, setIsWelcoming] = useState(false);
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
@@ -51,6 +52,7 @@ const App: React.FC = () => {
         await refreshData();
       } else {
         setUser(null);
+        setUserProfile(null);
         setSavedDecks([]);
         setCategories([]);
       }
@@ -94,6 +96,19 @@ const App: React.FC = () => {
   const refreshData = async () => {
     setSavedDecks(await getDecks());
     setCategories(await getCategories());
+    setUserProfile(await getUserProfile());
+  };
+
+  const handleAcceptShare = async (categoryId: string) => {
+    await acceptCategoryShare(categoryId);
+    await refreshData();
+    setToast({ message: 'Invitation accepted!', type: 'success' });
+  };
+
+  const handleRejectShare = async (categoryId: string) => {
+    await rejectCategoryShare(categoryId);
+    await refreshData();
+    setToast({ message: 'Invitation rejected.', type: 'success' });
   };
 
   const handleFilesSelect = async (files: File[], instructions: string = '', deckType: DeckType = DeckType.FLASHCARDS) => {
@@ -407,7 +422,12 @@ const App: React.FC = () => {
   };
 
   const handleGoToLibrary = async () => {
-    await refreshData();
+    try {
+      await refreshData();
+    } catch (e) {
+      console.error("Failed to refresh data", e);
+      setToast({ message: 'Failed to load some library data.', type: 'error' });
+    }
     setAppState(AppState.LIBRARY);
     setLastUploadedAssets(null);
     setLastInstructions('');
@@ -504,6 +524,7 @@ const App: React.FC = () => {
              <Library 
                 decks={savedDecks}
                 categories={categories}
+                userProfile={userProfile}
                 onSelectDeck={(d) => { setCurrentDeck(d); setAppState(AppState.STUDYING); }}
                 onDeleteDeck={setDeckToDelete}
                 onEditDeck={openEditDeckModal}
@@ -512,6 +533,8 @@ const App: React.FC = () => {
                 onDeleteCategory={handleDeleteCategory}
                 onCombineDecks={handleCombineDecks}
                 onShareCategory={handleShareCategory}
+                onAcceptShare={handleAcceptShare}
+                onRejectShare={handleRejectShare}
              />
           )}
 

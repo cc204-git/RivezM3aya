@@ -30,6 +30,12 @@ export interface Category {
   collaborators?: string[];
 }
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  acceptedCategories: string[];
+}
+
 export enum AppState {
   IDLE = 'IDLE',
   PROCESSING = 'PROCESSING',

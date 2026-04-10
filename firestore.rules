@@ -6,22 +6,26 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+
+    function isCollaborator() {
+      return isAuthenticated() && ('email' in request.auth.token) && ('collaborators' in resource.data) && (request.auth.token.email in resource.data.collaborators);
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     match /decks/{deckId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isCollaborator());
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isCollaborator()) && request.resource.data.userId == resource.data.userId;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
     match /categories/{categoryId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isCollaborator());
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isCollaborator()) && request.resource.data.userId == resource.data.userId;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
   }

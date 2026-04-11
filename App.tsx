@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Sparkles, Layers, BookOpen, CheckCircle, AlertCircle, X, Trash2, Edit2, Plus, Folder, LogOut } from 'lucide-react';
+import { Brain, Sparkles, Layers, BookOpen, CheckCircle, AlertCircle, X, Trash2, Edit2, Plus, Folder, LogOut, User } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import FileUpload from './components/FileUpload';
 import FlashcardDeck from './components/FlashcardDeck';
 import Library from './components/Library';
 import Login from './components/Login';
+import ProfileModal from './components/ProfileModal';
+import OnboardingModal from './components/OnboardingModal';
 import { AppState, Deck, FlashcardData, Category, DeckType } from './types';
 import { generateFlashcardsFromContent } from './services/geminiService';
-import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory, shareCategory, getUserProfile, acceptCategoryShare, rejectCategoryShare } from './services/storageService';
+import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory, shareCategory, getUserProfile, acceptCategoryShare, rejectCategoryShare, markOnboardingSeen } from './services/storageService';
 import { saveFilesLocally, deleteFilesLocally } from './services/localFileStorage';
 
 const App: React.FC = () => {
@@ -30,6 +32,8 @@ const App: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showEditDeckModal, setShowEditDeckModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   
   const [deckToDelete, setDeckToDelete] = useState<string | null>(null);
   const [deckToEdit, setDeckToEdit] = useState<Deck | null>(null);
@@ -96,7 +100,25 @@ const App: React.FC = () => {
   const refreshData = async () => {
     setSavedDecks(await getDecks());
     setCategories(await getCategories());
-    setUserProfile(await getUserProfile());
+    const profile = await getUserProfile();
+    setUserProfile(profile);
+    
+    if (profile && !profile.hasSeenOnboarding && !sessionStorage.getItem('onboardingDismissed')) {
+      setShowOnboardingModal(true);
+    }
+  };
+
+  const handleOnboardingOk = async () => {
+    setShowOnboardingModal(false);
+    await markOnboardingSeen();
+    if (userProfile) {
+      setUserProfile({ ...userProfile, hasSeenOnboarding: true });
+    }
+  };
+
+  const handleOnboardingSeeLater = () => {
+    sessionStorage.setItem('onboardingDismissed', 'true');
+    setShowOnboardingModal(false);
   };
 
   const handleAcceptShare = async (categoryId: string) => {
@@ -506,6 +528,15 @@ const App: React.FC = () => {
              <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
 
              <button 
+                onClick={() => setShowProfileModal(true)}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
+                title="Profile"
+             >
+               <User className="w-4 h-4" />
+               <span className="hidden sm:inline">Profile</span>
+             </button>
+
+             <button 
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
                 title="Logout"
@@ -741,6 +772,22 @@ const App: React.FC = () => {
             <p className="font-medium text-sm">{toast.message}</p>
           </div>
         </div>
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && user && (
+        <ProfileModal 
+          user={user} 
+          onClose={() => setShowProfileModal(false)} 
+        />
+      )}
+
+      {/* Onboarding Modal */}
+      {showOnboardingModal && (
+        <OnboardingModal 
+          onOk={handleOnboardingOk} 
+          onSeeLater={handleOnboardingSeeLater} 
+        />
       )}
     </div>
   );

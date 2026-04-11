@@ -247,13 +247,24 @@ export const getUserProfile = async (): Promise<UserProfile | null> => {
     if (snap.exists()) {
       return snap.data() as UserProfile;
     } else {
-      const newProfile: UserProfile = { uid: user.uid, email: user.email || '', acceptedCategories: [] };
+      const newProfile: UserProfile = { uid: user.uid, email: user.email || '', acceptedCategories: [], hasSeenOnboarding: false };
       await setDoc(ref, newProfile);
       return newProfile;
     }
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, `users/${auth.currentUser?.uid}`);
     return null;
+  }
+};
+
+export const markOnboardingSeen = async (): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const ref = doc(db, 'users', user.uid);
+    await updateDoc(ref, { hasSeenOnboarding: true });
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, `users/${auth.currentUser?.uid}`);
   }
 };
 

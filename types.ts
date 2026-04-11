@@ -34,6 +34,7 @@ export interface UserProfile {
   uid: string;
   email: string;
   acceptedCategories: string[];
+  hasSeenOnboarding?: boolean;
 }
 
 export enum AppState {

@@ -421,7 +421,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                   {currentCard.category}
                 </span>
              )}
-             <div className="w-full text-lg md:text-xl font-bold text-slate-800 leading-relaxed select-none mt-6 mb-8 text-center">
+             <div className="w-full text-lg md:text-xl font-bold text-slate-800 leading-relaxed select-none mt-6 mb-8 text-center break-words overflow-hidden">
                 <ReactMarkdown
                   remarkPlugins={[remarkMath]}
                   rehypePlugins={[rehypeKatex]}
@@ -431,7 +431,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                 </ReactMarkdown>
              </div>
 
-             <div className="flex flex-col gap-3 mb-8">
+             <div className="flex flex-col gap-3 mb-8 w-full">
                {currentCard.options.map((opt, idx) => {
                  const isSelected = selectedOptions.includes(idx);
                  const isCorrectOption = currentCard.correctOptions?.includes(idx);
@@ -454,7 +454,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                      key={idx}
                      onClick={(e) => toggleQcmOption(idx, e)}
                      disabled={qcmChecked}
-                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${optionClass}`}
+                     className={`w-full text-left p-4 rounded-xl border-2 transition-all break-words overflow-hidden ${optionClass}`}
                    >
                      <ReactMarkdown
                        remarkPlugins={[remarkMath]}
@@ -469,7 +469,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
              </div>
 
              {qcmChecked && (
-               <div className={`p-4 rounded-xl mb-8 ${isQcmCorrect() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+               <div className={`p-4 rounded-xl mb-8 break-words overflow-hidden ${isQcmCorrect() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                  <p className="font-bold mb-2">{isQcmCorrect() ? 'Correct!' : 'Incorrect.'}</p>
                  <ReactMarkdown
                    remarkPlugins={[remarkMath]}
@@ -524,7 +524,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                 )}
                 
                 <div className="flex-1 w-full flex flex-col items-center justify-center overflow-y-auto custom-scrollbar mt-6 mb-4">
-                  <div className="w-full text-xl md:text-3xl font-bold text-slate-800 leading-relaxed select-none">
+                  <div className="w-full text-xl md:text-3xl font-bold text-slate-800 leading-relaxed select-none break-words">
                     <ReactMarkdown
                       remarkPlugins={[remarkMath]}
                       rehypePlugins={[rehypeKatex]}
@@ -549,7 +549,7 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                 </span>
                 
                 <div className="flex-1 w-full flex flex-col items-center justify-center overflow-y-auto custom-scrollbar mt-6 mb-4">
-                  <div className="w-full text-lg md:text-2xl font-medium leading-relaxed select-none">
+                  <div className="w-full text-lg md:text-2xl font-medium leading-relaxed select-none break-words">
                     <ReactMarkdown
                       remarkPlugins={[remarkMath]}
                       rehypePlugins={[rehypeKatex]}

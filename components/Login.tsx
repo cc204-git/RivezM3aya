@@ -99,7 +99,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-                    placeholder="John Doe"
+                    placeholder="Youssef Ouled Abdallah"
                   />
                 </div>
               </div>

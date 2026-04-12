@@ -28,5 +28,12 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isCollaborator()) && request.resource.data.userId == resource.data.userId;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
+
+    match /liveRooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+    }
   }
 }

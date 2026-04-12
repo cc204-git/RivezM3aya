@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, Sparkles, Layers, BookOpen, Share2, CheckCircle, Clock } from 'lucide-react';
+import { Brain, Sparkles, Layers, BookOpen, Share2, CheckCircle, Clock, Users } from 'lucide-react';
 
 interface OnboardingModalProps {
   onOk: () => void;
@@ -20,8 +20,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onOk, onSeeLater }) =
               <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md border border-white/30 shadow-xl">
                 <Brain className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Welcome to Rivez M3aya!</h2>
-              <p className="text-indigo-100 text-lg max-w-md mx-auto">Your AI-powered study companion. Let's take a quick tour of what you can do.</p>
+              <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">What's New in Rivez M3aya!</h2>
+              <p className="text-indigo-100 text-lg max-w-md mx-auto">Your AI-powered study companion just got a massive upgrade.</p>
             </div>
           </div>
 
@@ -29,7 +29,23 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onOk, onSeeLater }) =
           <div className="p-8">
             <div className="grid gap-6 sm:grid-cols-2">
             
-            {/* Feature 1 */}
+            {/* Feature 1: NEW LIVE BATTLES */}
+            <div className="flex gap-4 sm:col-span-2 bg-purple-50 p-4 rounded-2xl border border-purple-100">
+              <div className="shrink-0 mt-1">
+                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-200">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="text-lg font-bold text-slate-900">Live QCM Battles</h4>
+                  <span className="bg-purple-200 text-purple-800 text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-wider">New</span>
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed">Create a live room, invite your friends with a 5-digit code, and race to answer AI-generated questions in real-time. Earn points for correct answers and speed bonuses to top the live leaderboard!</p>
+              </div>
+            </div>
+
+            {/* Feature 2 */}
             <div className="flex gap-4">
               <div className="shrink-0 mt-1">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
@@ -38,11 +54,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onOk, onSeeLater }) =
               </div>
               <div>
                 <h4 className="text-base font-bold text-slate-900 mb-1">AI Generation</h4>
-                <p className="text-sm text-slate-600 leading-relaxed">Upload PDFs, images, or paste text. Our AI will automatically generate smart flashcards and multiple-choice questions (QCM) for you.</p>
+                <p className="text-sm text-slate-600 leading-relaxed">Upload PDFs, images, or paste text. Our AI will automatically generate smart flashcards and multiple-choice questions for you.</p>
               </div>
             </div>
 
-            {/* Feature 2 */}
+            {/* Feature 3 */}
             <div className="flex gap-4">
               <div className="shrink-0 mt-1">
                 <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
@@ -55,24 +71,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onOk, onSeeLater }) =
               </div>
             </div>
 
-            {/* Feature 3 */}
-            <div className="flex gap-4">
-              <div className="shrink-0 mt-1">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
-                  <Layers className="w-5 h-5 text-amber-600" />
-                </div>
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-slate-900 mb-1">Organize Library</h4>
-                <p className="text-sm text-slate-600 leading-relaxed">Group your decks into custom categories. Keep your study materials neatly organized and easy to find.</p>
-              </div>
-            </div>
-
             {/* Feature 4 */}
             <div className="flex gap-4">
               <div className="shrink-0 mt-1">
-                <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100">
-                  <Share2 className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
+                  <Share2 className="w-5 h-5 text-amber-600" />
                 </div>
               </div>
               <div>

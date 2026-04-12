@@ -247,7 +247,7 @@ export const getUserProfile = async (): Promise<UserProfile | null> => {
     if (snap.exists()) {
       return snap.data() as UserProfile;
     } else {
-      const newProfile: UserProfile = { uid: user.uid, email: user.email || '', acceptedCategories: [], hasSeenOnboarding: false };
+      const newProfile: UserProfile = { uid: user.uid, email: user.email || '', acceptedCategories: [], hasSeenOnboarding: false, hasSeenUpdateV2: false };
       await setDoc(ref, newProfile);
       return newProfile;
     }
@@ -262,7 +262,7 @@ export const markOnboardingSeen = async (): Promise<void> => {
     const user = auth.currentUser;
     if (!user) return;
     const ref = doc(db, 'users', user.uid);
-    await updateDoc(ref, { hasSeenOnboarding: true });
+    await updateDoc(ref, { hasSeenOnboarding: true, hasSeenUpdateV2: true });
   } catch (e) {
     handleFirestoreError(e, OperationType.WRITE, `users/${auth.currentUser?.uid}`);
   }

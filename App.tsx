@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Sparkles, Layers, BookOpen, CheckCircle, AlertCircle, X, Trash2, Edit2, Plus, Folder, LogOut, User } from 'lucide-react';
+import { Brain, Sparkles, Layers, BookOpen, CheckCircle, AlertCircle, X, Trash2, Edit2, Plus, Folder, LogOut, User, Users } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import FileUpload from './components/FileUpload';
@@ -8,6 +8,7 @@ import Library from './components/Library';
 import Login from './components/Login';
 import ProfileModal from './components/ProfileModal';
 import OnboardingModal from './components/OnboardingModal';
+import LiveRoom from './components/LiveRoom';
 import { AppState, Deck, FlashcardData, Category, DeckType } from './types';
 import { generateFlashcardsFromContent } from './services/geminiService';
 import { saveDeck, getDecks, deleteDeck, getCategories, saveCategory, deleteCategory, shareCategory, getUserProfile, acceptCategoryShare, rejectCategoryShare, markOnboardingSeen } from './services/storageService';
@@ -103,7 +104,7 @@ const App: React.FC = () => {
     const profile = await getUserProfile();
     setUserProfile(profile);
     
-    if (profile && !profile.hasSeenOnboarding && !sessionStorage.getItem('onboardingDismissed')) {
+    if (profile && !profile.hasSeenUpdateV2 && !sessionStorage.getItem('onboardingV2Dismissed')) {
       setShowOnboardingModal(true);
     }
   };
@@ -112,12 +113,12 @@ const App: React.FC = () => {
     setShowOnboardingModal(false);
     await markOnboardingSeen();
     if (userProfile) {
-      setUserProfile({ ...userProfile, hasSeenOnboarding: true });
+      setUserProfile({ ...userProfile, hasSeenOnboarding: true, hasSeenUpdateV2: true });
     }
   };
 
   const handleOnboardingSeeLater = () => {
-    sessionStorage.setItem('onboardingDismissed', 'true');
+    sessionStorage.setItem('onboardingV2Dismissed', 'true');
     setShowOnboardingModal(false);
   };
 
@@ -524,6 +525,18 @@ const App: React.FC = () => {
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Library</span>
              </button>
+
+             <button 
+                onClick={() => { setAppState(AppState.LIVE_ROOM); setCurrentDeck(null); setLastUploadedAssets(null); setError(null); }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                  ${appState === AppState.LIVE_ROOM 
+                    ? 'bg-purple-50 text-purple-700' 
+                    : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                  }`}
+             >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Live Room</span>
+             </button>
              
              <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
 
@@ -566,6 +579,13 @@ const App: React.FC = () => {
                 onShareCategory={handleShareCategory}
                 onAcceptShare={handleAcceptShare}
                 onRejectShare={handleRejectShare}
+             />
+          )}
+
+          {appState === AppState.LIVE_ROOM && (
+             <LiveRoom 
+               onGoHome={handleGoHome}
+               onGoToLibrary={handleGoToLibrary}
              />
           )}
 

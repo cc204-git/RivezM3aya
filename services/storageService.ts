@@ -101,8 +101,11 @@ export const saveDeck = async (deck: Deck): Promise<void> => {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error("User not authenticated");
 
+    const creatorName = auth.currentUser?.displayName || 'Unknown User';
+    const creatorEmail = auth.currentUser?.email || 'Unknown Email';
+
     const deckRef = doc(db, 'decks', deck.id);
-    await setDoc(deckRef, { ...deck, userId });
+    await setDoc(deckRef, { ...deck, userId, creatorName, creatorEmail });
   } catch (e) {
     handleFirestoreError(e, OperationType.WRITE, `decks/${deck.id}`);
   }

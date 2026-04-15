@@ -20,6 +20,8 @@ export interface Deck {
   type?: DeckType;
   hasSourceFiles?: boolean;
   userId?: string;
+  creatorName?: string;
+  creatorEmail?: string;
   collaborators?: string[];
 }
 

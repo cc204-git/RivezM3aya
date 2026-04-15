@@ -418,10 +418,16 @@ const Library: React.FC<LibraryProps> = ({
                       <Layers className="w-3 h-3" />
                       {deck.cards.length} Cards
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 mb-1">
                       <Calendar className="w-3 h-3" />
                       {new Date(deck.createdAt).toLocaleDateString()}
                     </span>
+                    {deck.creatorName && (
+                      <span className="flex items-center gap-1 text-indigo-600/80 font-medium truncate max-w-[120px]" title={`Created by ${deck.creatorName}`}>
+                        <Users className="w-3 h-3 shrink-0" />
+                        {deck.creatorName}
+                      </span>
+                    )}
                   </div>
                   
                   {!isCombineMode && (
